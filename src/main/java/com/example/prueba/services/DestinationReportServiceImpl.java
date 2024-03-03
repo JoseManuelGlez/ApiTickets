@@ -40,6 +40,11 @@ public class DestinationReportServiceImpl implements IDestinationReportService {
                 .httpStatus(HttpStatus.CREATED).build();
     }
 
+    @Override
+    public DestinationReport findDestinationReportByUserId(User user) {
+        return repository.findDestinationReportByUserId(user);
+    }
+
     private DestinationReport from(CreateDestinationReportRequest request){
         DestinationReport destinationReport = new DestinationReport();
 

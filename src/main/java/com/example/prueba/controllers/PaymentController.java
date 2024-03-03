@@ -1,14 +1,16 @@
 package com.example.prueba.controllers;
 
 import com.example.prueba.controllers.dtos.requests.CreatePaymentRequest;
-import com.example.prueba.controllers.dtos.responses.BaseResponse;
 import com.example.prueba.services.interfaces.IPaymentService;
+import com.example.prueba.util.URLUtils;
+import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import com.paypal.api.payments.Links;
+import com.paypal.api.payments.Payment;
+import com.paypal.base.rest.PayPalRESTException;
 
 @RestController
 @RequestMapping("payment")
@@ -16,10 +18,28 @@ public class PaymentController {
     @Autowired
     private IPaymentService service;
 
-    @PostMapping
-    public ResponseEntity<BaseResponse> create(@RequestBody CreatePaymentRequest request) {
-        BaseResponse baseResponse = service.create(request);
+    public static final String PAYPAL_SUCCESS_URL = "pay/success";
+    public static final String PAYPAL_CANCEL_URL = "pay/cancel";
 
-        return new ResponseEntity<>(baseResponse, baseResponse.getHttpStatus());
+    private Logger log = LoggerFactory.getLogger(getClass());
+
+    @RequestMapping(method = RequestMethod.POST, value = "pay")
+    public String pay(@RequestBody CreatePaymentRequest request){
+        String cancelUrl = URLUtils.getBaseURl((HttpServletRequest) request) + "/" + PAYPAL_CANCEL_URL;
+        String successUrl = URLUtils.getBaseURl((HttpServletRequest) request) + "/" + PAYPAL_SUCCESS_URL;
+        try {
+            Payment payment = service.create(
+                    request,
+                    cancelUrl,
+                    successUrl);
+            for(Links links : payment.getLinks()){
+                if(links.getRel().equals("approval_url")){
+                    return "redirect:" + links.getHref();
+                }
+            }
+        } catch (PayPalRESTException e) {
+            log.error(e.getMessage());
+        }
+        return "redirect:/";
     }
 }

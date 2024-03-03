@@ -15,6 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class ReservationServiceImpl implements IReservationService {
     @Autowired
@@ -43,18 +45,20 @@ public class ReservationServiceImpl implements IReservationService {
     private Reservation from(CreateReservationRequest request){
         Reservation reservation = new Reservation();
 
-        reservation.setDate(request.getDate());
-        reservation.setTime(request.getTime());
+        reservation.setDepartureDate(request.getDepartureDate());
+        reservation.setReturnDate(request.getReturnDate());
+        reservation.setDepartureTime(request.getDepartureTime());
+        reservation.setReturnTime(request.getReturnTime());
         reservation.setSeat(request.getSeat());
         reservation.setStatus(request.getStatus());
         reservation.setTotal(request.getTotal());
+        reservation.setLuggageType(request.getLuggageType());
 
         Destination destination = destinationService.findDestinationByDestination(request.getDestination());
-        User userId = userService.findIdById(request.getUserId());
+        List<User> users = userService.findUsers(request.getUsers());
         Vehicle vehicle = vehicleService.findPlatByPlat(request.getPlat());
-
         reservation.setDestination(destination);
-        reservation.setUser(userId);
+        reservation.setUsers(users);
         reservation.setVehicle(vehicle);
 
         return reservation;
@@ -64,16 +68,18 @@ public class ReservationServiceImpl implements IReservationService {
         CreateReservationResponse response = new CreateReservationResponse();
 
         response.setId(reservation.getId());
-        response.setDate(reservation.getDate());
-        response.setTime(reservation.getTime());
+        response.setDepartureDate(reservation.getDepartureDate());
+        response.setReturnDate(reservation.getReturnDate());
+        response.setDepartureTime(reservation.getDepartureTime());
+        response.setReturnTime(reservation.getReturnTime());
         response.setSeat(reservation.getSeat());
         response.setStatus(reservation.getStatus());
         response.setTotal(reservation.getTotal());
+        response.setLuggageType(reservation.getLuggageType());
 
         response.setDestination(from(reservation.getDestination()));
-        response.setUserId(from(reservation.getUser()));
+        response.setUsers(reservation.getUsers());
         response.setPlat(from(reservation.getVehicle()));
-
 
         return response;
     }
@@ -90,14 +96,6 @@ public class ReservationServiceImpl implements IReservationService {
         PlatVehicleResponse response = new PlatVehicleResponse();
 
         response.setPlat(vehicle.getPlat());
-
-        return response;
-    }
-
-    private IdUserResponse from(User user){
-        IdUserResponse response = new IdUserResponse();
-
-        response.setIdUser(user.getId());
 
         return response;
     }

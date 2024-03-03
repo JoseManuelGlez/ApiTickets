@@ -6,9 +6,8 @@ import lombok.Setter;
 import java.util.UUID;
 
 @Getter @Setter
-public class CreateUserResponse {
+public class GetDestinationResponse {
     private UUID id;
-    private String name;
-    private String email;
-    private String password;
+    private String State;
+    private String city;
 }

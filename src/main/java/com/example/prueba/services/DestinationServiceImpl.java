@@ -1,9 +1,11 @@
 package com.example.prueba.services;
 
 import com.example.prueba.controllers.dtos.requests.CreateDestinationRequest;
+import com.example.prueba.controllers.dtos.requests.GetDestinationRequest;
 import com.example.prueba.controllers.dtos.responses.BaseResponse;
 import com.example.prueba.controllers.dtos.responses.CreateDestinationResponse;
 import com.example.prueba.entities.Destination;
+import com.example.prueba.entities.enums.DestinationStatus;
 import com.example.prueba.repositories.IDestinationRepository;
 import com.example.prueba.services.interfaces.IDestinationService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +39,7 @@ public class DestinationServiceImpl implements IDestinationService {
                 .data(destinations)
                 .message("Destinations found")
                 .success(Boolean.TRUE)
-                .httpStatus(HttpStatus.CREATED).build();
+                .httpStatus(HttpStatus.OK).build();
     }
 
     @Override
@@ -45,10 +47,28 @@ public class DestinationServiceImpl implements IDestinationService {
         return repository.findDestinationByDestination(destination);
     }
 
+    @Override
+    public BaseResponse findDestinationsByStateAndCity(GetDestinationRequest request) {
+        List<Destination> destinations = repository.findDestinationsByStateAndCity(request.getState(), request.getCity());
+
+        List<Destination> availableDestinations = destinations.stream()
+                .filter(destination -> destination.getDestinationStatus() == DestinationStatus.AVAILABLE)
+                .collect(Collectors.toList());
+
+        return BaseResponse.builder()
+                .data(availableDestinations)
+                .message("Destinations found")
+                .success(Boolean.TRUE)
+                .httpStatus(HttpStatus.OK).build();
+    }
+
     private Destination from(CreateDestinationRequest request){
         Destination destination = new Destination();
 
         destination.setDestination(request.getDestination());
+        destination.setCity(request.getCity());
+        destination.setState(request.getState());
+        destination.setDestinationStatus(request.getDestinationStatus());
 
         return destination;
     }
@@ -58,7 +78,11 @@ public class DestinationServiceImpl implements IDestinationService {
 
         response.setId(destination.getId());
         response.setDestination(destination.getDestination());
+        response.setCity(destination.getCity());
+        response.setState(response.getState());
+        response.setDestinationStatus(response.getDestinationStatus());
 
         return response;
+
     }
 }

@@ -4,8 +4,6 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Getter @Setter
-public class CreateUserRequest {
-    private String name;
-    private String email;
-    private String password;
+public class UpdateCheckInRequest {
+    private String code;
 }

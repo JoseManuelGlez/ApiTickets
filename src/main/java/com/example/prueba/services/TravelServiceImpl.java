@@ -38,6 +38,7 @@ public class TravelServiceImpl implements ITravelService {
 
         travel.setDate(request.getDate());
         travel.setTime(request.getTime());
+        travel.setType(request.getType());
 
         return travel;
     }
@@ -48,6 +49,7 @@ public class TravelServiceImpl implements ITravelService {
         response.setId(travel.getId());
         response.setDate(travel.getDate());
         response.setTime(travel.getTime());
+        response.setType(travel.getType());
 
         return response;
     }

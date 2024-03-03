@@ -1,66 +1,95 @@
 package com.example.prueba.services;
 
 import com.example.prueba.controllers.dtos.requests.CreatePaymentRequest;
-import com.example.prueba.controllers.dtos.responses.BaseResponse;
-import com.example.prueba.controllers.dtos.responses.CreatePaymentResponse;
-import com.example.prueba.controllers.dtos.responses.IdUserResponse;
-import com.example.prueba.entities.*;
-import com.example.prueba.repositories.IPaymentRepository;
+import com.example.prueba.entities.CheckInCode;
+import com.example.prueba.entities.DestinationReport;
+import com.example.prueba.entities.User;
+import com.example.prueba.services.interfaces.ICheckInService;
+import com.example.prueba.services.interfaces.IDestinationReportService;
 import com.example.prueba.services.interfaces.IPaymentService;
 import com.example.prueba.services.interfaces.IUserService;
+import com.paypal.base.rest.PayPalRESTException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+
 import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.paypal.api.payments.Amount;
+import com.paypal.api.payments.Payer;
+import com.paypal.api.payments.Payment;
+import com.paypal.api.payments.RedirectUrls;
+import com.paypal.api.payments.Transaction;
+import com.paypal.base.rest.APIContext;
 
 @Service
 public class PaymentServiceImpl implements IPaymentService {
     @Autowired
-    private IPaymentRepository repository;
+    private APIContext apiContext;
+
+    @Autowired
+    private JavaMailSender javaMailSender;
+
+    @Value("${spring.mail.username}")
+    private String fromEmail;
 
     @Autowired
     private IUserService userService;
 
+    @Autowired
+    private IDestinationReportService destinationReportService;
+
+    @Autowired
+    private ICheckInService checkInService;
+
     @Override
-    public BaseResponse create(CreatePaymentRequest request) {
-        Payment reservation = from(request);
+    public Payment create(CreatePaymentRequest request, String cancelUrl, String successUrl) throws PayPalRESTException {
+        Amount amount = new Amount();
+        amount.setCurrency(request.getCurrency());
+        Double total = new BigDecimal(request.getTotal()).setScale(2, RoundingMode.HALF_UP).doubleValue();
+        amount.setTotal(String.format("%.2f", total));
 
-        return BaseResponse.builder()
-                .data(from(repository.save(reservation)))
-                .message("Reservation created corretly")
-                .success(Boolean.TRUE)
-                .httpStatus(HttpStatus.CREATED).build();
-    }
+        Transaction transaction = new Transaction();
+        transaction.setDescription(request.getDescription());
+        transaction.setAmount(amount);
 
-    private Payment from(CreatePaymentRequest request){
+        List<Transaction> transactions = new ArrayList<>();
+        transactions.add(transaction);
+
+        Payer payer = new Payer();
+        payer.setPaymentMethod(request.getMethod().toString());
+
         Payment payment = new Payment();
+        payment.setIntent(request.getIntent().toString());
+        payment.setPayer(payer);
+        payment.setTransactions(transactions);
+        RedirectUrls redirectUrls = new RedirectUrls();
+        redirectUrls.setCancelUrl(cancelUrl);
+        redirectUrls.setReturnUrl(successUrl);
+        payment.setRedirectUrls(redirectUrls);
 
-        payment.setType(request.getType());
-        payment.setCost(request.getCost());
+        User user = userService.findIdByEmail(request.getEmail());
+        DestinationReport destinationReport = destinationReportService.findDestinationReportByUserId(user);
+        CheckInCode checkInCode = checkInService.create("NO_ASSIST");
 
-        User user = userService.findIdById(request.getUserId());
+        sendPaymentConfirmationEmail(payment, request.getEmail(), user, destinationReport, checkInCode);
 
-        payment.setUser(user);
-
-        return payment;
+        return payment.create(apiContext);
     }
 
-    private CreatePaymentResponse from(Payment payment){
-        CreatePaymentResponse response = new CreatePaymentResponse();
+    private void sendPaymentConfirmationEmail(Payment payment, String userEmail, User user, DestinationReport destinationReport, CheckInCode checkInCode) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(userEmail);
+        message.setSubject("Confirmación de pago");
+        message.setText("Se ha realizado un pago por el monto de " + payment.getTransactions().get(0).getAmount().getTotal() + " " + payment.getTransactions().get(0).getAmount().getCurrency() + "Usuario: " + user + " " + "Destino: " + destinationReport + " " + "Codigo: " + checkInCode.getCode());
 
-        response.setId(payment.getId());
-        response.setType(payment.getType());
-        response.setCost(payment.getCost());
-
-        response.setUserId(from(payment.getUser()));
-
-        return response;
-    }
-
-    private IdUserResponse from(User user){
-        IdUserResponse response = new IdUserResponse();
-
-        response.setIdUser(user.getId());
-
-        return response;
+        javaMailSender.send(message);
     }
 }

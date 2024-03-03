@@ -1,9 +1,11 @@
 package com.example.prueba.entities;
 
+import com.example.prueba.entities.enums.LuggageType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -15,19 +17,22 @@ public class Reservation {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    private String date;
-    private String time;
+    private String departureDate;
+    private String returnDate;
+    private String departureTime;
+    private String returnTime;
     private int seat;
     private String status;
     private float total;
+    private LuggageType luggageType;
 
     @OneToOne
     @JoinColumn(name = "destination", referencedColumnName = "destination")
     private Destination destination;
 
-    @OneToOne
+    @OneToMany
     @JoinColumn(name = "user_id", referencedColumnName = "id")
-    private User user;
+    private List<User> users;
 
     @OneToOne
     @JoinColumn(name = "plat", referencedColumnName = "plat")

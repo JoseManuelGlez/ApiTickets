@@ -16,10 +16,10 @@ public class User {
     private UUID id;
 
     private String name;
-    private String age;
-    private String curp;
+    private String email;
+    private String password;
 
-    @OneToOne(mappedBy = "user")
+    @ManyToOne
     private Reservation reservation;
 
     @OneToOne(mappedBy = "user")
